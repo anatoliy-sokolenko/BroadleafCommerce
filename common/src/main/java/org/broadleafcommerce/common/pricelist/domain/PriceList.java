@@ -16,9 +16,9 @@
 
 package org.broadleafcommerce.common.pricelist.domain;
 
-import java.io.Serializable;
-
 import org.broadleafcommerce.common.currency.domain.BroadleafCurrency;
+
+import java.io.Serializable;
 
 /**
  * 
@@ -44,4 +44,12 @@ public interface PriceList extends Serializable {
     void setId(Long id);
 
     Long getId();
+
+    PriceList getParentPriceList();
+
+    void setParentPriceList(PriceList parentPriceList);
+
+    Boolean getUseParentOnNull();
+
+    void setUseParentOnNull(Boolean useParentOnNull);
 }

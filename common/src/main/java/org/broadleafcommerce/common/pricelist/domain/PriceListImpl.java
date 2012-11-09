@@ -74,6 +74,15 @@ import javax.persistence.TableGenerator;
     @AdminPresentationToOneLookup(lookupDisplayProperty="friendlyName")
     protected BroadleafCurrency currencyCode;
     
+    @ManyToOne(targetEntity = PriceListImpl.class)
+    @JoinColumn(name = "PARENT_PRICE_LIST")
+    @AdminPresentation(friendlyName = "PriceListImpl_parentPricelist", order=2,group = "PriceListImpl_Details", excluded = true, visibility = VisibilityEnum.GRID_HIDDEN)
+    @AdminPresentationToOneLookup(lookupDisplayProperty="friendlyName")
+    private PriceList parentPriceList;
+
+    @Column (name = "USE_PARENT_ON_NULL")
+    @AdminPresentation(friendlyName = "PriceListImpl_Is_Default", order=4, group = "PriceListImpl_Details", prominent=false)
+    private Boolean useParentOnNull;
     
     @Override
     public String getFriendlyName() {
@@ -156,5 +165,21 @@ import javax.persistence.TableGenerator;
     @Override
     public void setCurrencyCode(BroadleafCurrency currencyCode) {
         this.currencyCode = currencyCode;
+    }
+    @Override
+    public Boolean getUseParentOnNull() {
+        return useParentOnNull;
+    }
+    @Override
+    public void setUseParentOnNull(Boolean useParentOnNull) {
+        this.useParentOnNull = useParentOnNull;
+    }
+    @Override
+    public PriceList getParentPriceList() {
+        return parentPriceList;
+    }
+    @Override
+    public void setParentPriceList(PriceList parentPriceList) {
+        this.parentPriceList = parentPriceList;
     }
 }

@@ -30,6 +30,7 @@ import org.broadleafcommerce.core.pricing.domain.SkuBundleItemPriceData;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 
@@ -57,31 +58,34 @@ public class PriceListDynamicSkuPricingServiceImpl implements DynamicSkuPricingS
         }
         
         if (priceList != null && !showDefaultSkuPrice ) {
-            if (sku.getPriceDataMap() != null) {               
-                PriceData priceData = sku
-                        .getPriceDataMap().get(priceList.getPriceKey());
-                if (priceData != null) {
+            if (sku.getPriceDataMap() != null && !sku.getPriceDataMap().isEmpty()) {               
+            
                     prices = new DynamicSkuPrices();
-                    prices.setRetailPrice(BroadleafCurrencyUtils.getMoney(
-                            priceData.getRetailPrice(), priceList.getCurrencyCode()));
-                    prices.setSalePrice(BroadleafCurrencyUtils.getMoney(
-                            priceData.getSalePrice(), priceList.getCurrencyCode()));
-                }
+                  
+                 
+                        prices.setRetailPrice(getRetailPriceFromPriceList(sku.getPriceDataMap(), priceList));
+                        prices.setSalePrice(getSalePriceFromPriceList( sku.getPriceDataMap(), priceList));
+                  
+                   
+                    if(prices.getRetailPrice()==null && prices.getSalePrice()==null) {
+                        prices=new DynamicSkuPrices();
+                    }
+                
             }
             
             Money adjustments = null;
             if (sku.getProductOptionValueAdjustments() != null) {
                 for(ProductOptionValue optionValue : sku.getProductOptionValues()) {
                     if (optionValue.getPriceAdjustmentMap() != null) {                        
-                        PriceAdjustment adjustment = optionValue.getPriceAdjustmentMap().get(priceList.getPriceKey());
-                        if (adjustment != null && adjustment.getPriceAdjustment() != null) {
-                            Money adjustmentAsMoney = BroadleafCurrencyUtils.getMoney(adjustment.getPriceAdjustment(), priceList.getCurrencyCode());
+                    
+                            Money adjustmentAsMoney =getPriceAdjustmentFromPriceList(optionValue.getPriceAdjustmentMap(), priceList);
+                        
                             if (adjustments == null) {
                                 adjustments = adjustmentAsMoney;
                             } else {
                                 adjustments = adjustments.add(adjustmentAsMoney);
                             }
-                        }                        
+                                
                     }
                 }
                 prices.setPriceAdjustment(adjustments);
@@ -96,7 +100,65 @@ public class PriceListDynamicSkuPricingServiceImpl implements DynamicSkuPricingS
     }
 
     
-   // TODO: BCP -- Need to apply the same approach (e.g. proxy to this method to prevent recursion)
+    private Money getPriceAdjustmentFromPriceList(Map<String, PriceAdjustment> priceAdjustmentMap, PriceList priceList) {
+        PriceAdjustment priceData = priceAdjustmentMap.get(priceList.getPriceKey());
+        if (priceData == null && priceData.getPriceAdjustment()!=null) {
+            return BroadleafCurrencyUtils.getMoney(priceData.getPriceAdjustment(), priceList.getCurrencyCode());
+         } else if
+         ( Boolean.valueOf(priceList.getUseParentOnNull()) && priceList.getParentPriceList() != null) {
+            return getPriceAdjustmentFromPriceList(priceAdjustmentMap, priceList.getParentPriceList());
+        }
+  
+        return null;
+    }
+
+    private Money getRetailPriceFromPriceList(Map<String, PriceData> priceDataMap, PriceList priceList) {
+
+        PriceData priceData = priceDataMap.get(priceList.getPriceKey());
+       if(priceData!=null && priceData.getRetailPrice()!=null) {
+           return BroadleafCurrencyUtils.getMoney(priceData.getRetailPrice(), priceList.getCurrencyCode());
+    } else 
+        if (Boolean.valueOf(priceList.getUseParentOnNull()) && priceList.getParentPriceList() != null) {
+
+            return getRetailPriceFromPriceList(priceDataMap, priceList.getParentPriceList());
+        }
+
+      //  if (priceData == null) {
+            return null;
+      //  } else {
+        
+
+    }
+
+    private Money getSkuBundleSalePriceFromPriceList(Map<String, SkuBundleItemPriceData> priceDataMap, PriceList priceList) {
+        SkuBundleItemPriceData priceData = priceDataMap.get(priceList.getPriceKey());
+        
+        if(priceData != null && priceData.getSalePrice()!=null) {
+            return BroadleafCurrencyUtils.getMoney(priceData.getSalePrice(), priceList.getCurrencyCode());
+        } 
+        else if (Boolean.valueOf(priceList.getUseParentOnNull()) && priceList.getParentPriceList() != null) {
+            return getSkuBundleSalePriceFromPriceList(priceDataMap, priceList.getParentPriceList());
+        }
+        //if (priceData == null) {
+            return null;
+        
+    }
+
+    private Money getSalePriceFromPriceList(Map<String, PriceData> priceDataMap, PriceList priceList) {
+        PriceData priceData = priceDataMap.get(priceList.getPriceKey());
+        
+        if(priceData != null && priceData.getSalePrice()!=null) {
+            return BroadleafCurrencyUtils.getMoney(priceData.getSalePrice(), priceList.getCurrencyCode());
+        } 
+        else if (Boolean.valueOf(priceList.getUseParentOnNull()) && priceList.getParentPriceList() != null) {
+            return getSalePriceFromPriceList(priceDataMap, priceList.getParentPriceList());
+        }
+        //if (priceData == null) {
+            return null;
+        
+    }
+
+
     @Override
     public DynamicSkuPrices getSkuBundleItemPrice(
             SkuBundleItem skuBundleItem,
@@ -118,21 +180,10 @@ public class PriceListDynamicSkuPricingServiceImpl implements DynamicSkuPricingS
         }
         
         if ((priceList != null) && !showDefaultSkuPrice) {
-            if( skuBundleItem.getPriceDataMap() != null )
+            if( skuBundleItem.getPriceDataMap() != null  && !skuBundleItem.getPriceDataMap().isEmpty())
               {
-               
-                 SkuBundleItemPriceData priceData = skuBundleItem
-                         .getPriceDataMap().get(priceList.getPriceKey());
-                if (priceData != null) {
-                    prices = new DynamicSkuPrices();
-                    prices.setSalePrice(BroadleafCurrencyUtils.getMoney(
-                    priceData.getSalePrice(), priceList.getCurrencyCode()));
-                  
-                }
-            
-    
-            
-        }
+                prices.setSalePrice(getSkuBundleSalePriceFromPriceList( skuBundleItem.getPriceDataMap(), priceList));
+             }
         }else {
           
             prices.setSalePrice(skuBundleItem.getSalePrice());
@@ -166,18 +217,12 @@ public class PriceListDynamicSkuPricingServiceImpl implements DynamicSkuPricingS
         
         
         if ((priceList != null) && !showDefaultSkuPrice) {
-            if( skuBundleItem.getPriceAdjustmentMap() != null) {
-               
-            PriceAdjustment priceData = skuBundleItem
-                        .getPriceAdjustmentMap().get(priceList.getPriceKey());
-                if (priceData != null) {
+            if( skuBundleItem.getPriceAdjustmentMap() != null &&  !skuBundleItem.getPriceAdjustmentMap().isEmpty()) {
+
                     prices = new DynamicSkuPrices();
-                    prices.setPriceAdjustment(BroadleafCurrencyUtils.getMoney(
-                            priceData.getPriceAdjustment(), priceList.getCurrencyCode()));
-                  
-                }
-            
-        }
+                    prices.setPriceAdjustment(getPriceAdjustmentFromPriceList(skuBundleItem
+                            .getPriceAdjustmentMap(), priceList));
+            }
         } else {
           
             prices.setPriceAdjustment(priceAdjustment);
